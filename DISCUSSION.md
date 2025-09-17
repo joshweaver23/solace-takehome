@@ -1,4 +1,4 @@
-#Completed Tasks:
+### Completed Tasks:
 
   1. Bug Fixes & Anti-Patterns
 
@@ -34,8 +34,8 @@
   - Database indexes designed
 
   ---
-  
-Top 3 Next Priorities:
+
+### Top 3 Next Priorities:
 
   1. Debounced Search
 
