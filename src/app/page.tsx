@@ -1,16 +1,39 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useState, useMemo, useCallback } from "react";
 import { Advocate, AdvocateApiResponse } from "../types/advocate";
 
 export default function Home() {
   const [advocates, setAdvocates] = useState<Advocate[]>([]);
-  const [filteredAdvocates, setFilteredAdvocates] = useState<Advocate[]>([]);
   const [searchTerm, setSearchTerm] = useState<string>("");
+  const [isLoading, setIsLoading] = useState<boolean>(true);
+
+  // Memoized filtering logic - only recalculates when advocates or searchTerm changes
+  const filteredAdvocates = useMemo(() => {
+    if (!searchTerm.trim()) {
+      return advocates;
+    }
+
+    const searchLower = searchTerm.toLowerCase();
+    return advocates.filter((advocate: Advocate) => {
+      return (
+        advocate.firstName.toLowerCase().includes(searchLower) ||
+        advocate.lastName.toLowerCase().includes(searchLower) ||
+        advocate.city.toLowerCase().includes(searchLower) ||
+        advocate.degree.toLowerCase().includes(searchLower) ||
+        advocate.specialties.some(specialty =>
+          specialty.toLowerCase().includes(searchLower)
+        ) ||
+        advocate.yearsOfExperience.toString().includes(searchTerm) ||
+        advocate.phoneNumber.toString().includes(searchTerm)
+      );
+    });
+  }, [advocates, searchTerm]);
 
   useEffect(() => {
     const fetchAdvocates = async () => {
       try {
+        setIsLoading(true);
         console.log("fetching advocates...");
         const response = await fetch("/api/advocates");
 
@@ -20,45 +43,26 @@ export default function Home() {
 
         const jsonResponse: AdvocateApiResponse = await response.json();
         setAdvocates(jsonResponse.data);
-        setFilteredAdvocates(jsonResponse.data);
       } catch (error) {
         console.error("Failed to fetch advocates:", error);
         // TODO: set an error state here for user feedback
+      } finally {
+        setIsLoading(false);
       }
     };
 
     fetchAdvocates();
   }, []);
 
-  const onChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const newSearchTerm = e.target.value;
-    setSearchTerm(newSearchTerm);
+  // Memoized event handler to prevent unnecessary re-renders
+  const onChange = useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
+    setSearchTerm(e.target.value);
+  }, []);
 
-    console.log("filtering advocates...");
-    const filteredAdvocates = advocates.filter((advocate: Advocate) => {
-      const searchLower = newSearchTerm.toLowerCase();
-
-      return (
-        advocate.firstName.toLowerCase().includes(searchLower) ||
-        advocate.lastName.toLowerCase().includes(searchLower) ||
-        advocate.city.toLowerCase().includes(searchLower) ||
-        advocate.degree.toLowerCase().includes(searchLower) ||
-        advocate.specialties.some(specialty =>
-          specialty.toLowerCase().includes(searchLower)
-        ) ||
-        advocate.yearsOfExperience.toString().includes(newSearchTerm) ||
-        advocate.phoneNumber.toString().includes(newSearchTerm)
-      );
-    });
-
-    setFilteredAdvocates(filteredAdvocates);
-  };
-
-  const onClick = () => {
+  const onClick = useCallback(() => {
     console.log(advocates);
     setSearchTerm("");
-    setFilteredAdvocates(advocates);
-  };
+  }, [advocates]);
 
   return (
     <main style={{ margin: "24px" }}>
@@ -88,7 +92,10 @@ export default function Home() {
       </div>
       <br />
       <br />
-      <table role="table" aria-label="List of healthcare advocates">
+      {isLoading ? (
+        <div aria-live="polite">Loading advocates...</div>
+      ) : (
+        <table role="table" aria-label="List of healthcare advocates">
         <caption>
           Healthcare Advocates Directory - {filteredAdvocates.length} advocate{filteredAdvocates.length !== 1 ? 's' : ''} found
         </caption>
@@ -122,7 +129,8 @@ export default function Home() {
             );
           })}
         </tbody>
-      </table>
+        </table>
+      )}
     </main>
   );
 }
