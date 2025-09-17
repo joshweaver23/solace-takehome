@@ -1,4 +1,5 @@
 import db from "..";
+import { AdvocateCreateInput } from "../../types/advocate";
 import { advocates } from "../schema";
 
 const specialties = [
@@ -37,7 +38,7 @@ const randomSpecialty = () => {
   return [random1, random2];
 };
 
-const advocateData = [
+const advocateData: AdvocateCreateInput[] = [
   {
     firstName: "John",
     lastName: "Doe",
