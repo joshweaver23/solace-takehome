@@ -1,35 +1,53 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import { Advocate, AdvocateApiResponse } from "../types/advocate";
 
 export default function Home() {
-  const [advocates, setAdvocates] = useState([]);
-  const [filteredAdvocates, setFilteredAdvocates] = useState([]);
+  const [advocates, setAdvocates] = useState<Advocate[]>([]);
+  const [filteredAdvocates, setFilteredAdvocates] = useState<Advocate[]>([]);
+  const [searchTerm, setSearchTerm] = useState<string>("");
 
   useEffect(() => {
-    console.log("fetching advocates...");
-    fetch("/api/advocates").then((response) => {
-      response.json().then((jsonResponse) => {
+    const fetchAdvocates = async () => {
+      try {
+        console.log("fetching advocates...");
+        const response = await fetch("/api/advocates");
+
+        if (!response.ok) {
+          throw new Error(`HTTP error! status: ${response.status}`);
+        }
+
+        const jsonResponse: AdvocateApiResponse = await response.json();
         setAdvocates(jsonResponse.data);
         setFilteredAdvocates(jsonResponse.data);
-      });
-    });
+      } catch (error) {
+        console.error("Failed to fetch advocates:", error);
+        // TODO: set an error state here for user feedback
+      }
+    };
+
+    fetchAdvocates();
   }, []);
 
-  const onChange = (e) => {
-    const searchTerm = e.target.value;
-
-    document.getElementById("search-term").innerHTML = searchTerm;
+  const onChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const newSearchTerm = e.target.value;
+    setSearchTerm(newSearchTerm);
 
     console.log("filtering advocates...");
-    const filteredAdvocates = advocates.filter((advocate) => {
+    const filteredAdvocates = advocates.filter((advocate: Advocate) => {
+      const searchLower = newSearchTerm.toLowerCase();
+
       return (
-        advocate.firstName.includes(searchTerm) ||
-        advocate.lastName.includes(searchTerm) ||
-        advocate.city.includes(searchTerm) ||
-        advocate.degree.includes(searchTerm) ||
-        advocate.specialties.includes(searchTerm) ||
-        advocate.yearsOfExperience.includes(searchTerm)
+        advocate.firstName.toLowerCase().includes(searchLower) ||
+        advocate.lastName.toLowerCase().includes(searchLower) ||
+        advocate.city.toLowerCase().includes(searchLower) ||
+        advocate.degree.toLowerCase().includes(searchLower) ||
+        advocate.specialties.some(specialty =>
+          specialty.toLowerCase().includes(searchLower)
+        ) ||
+        advocate.yearsOfExperience.toString().includes(newSearchTerm) ||
+        advocate.phoneNumber.toString().includes(newSearchTerm)
       );
     });
 
@@ -38,6 +56,7 @@ export default function Home() {
 
   const onClick = () => {
     console.log(advocates);
+    setSearchTerm("");
     setFilteredAdvocates(advocates);
   };
 
@@ -47,36 +66,54 @@ export default function Home() {
       <br />
       <br />
       <div>
-        <p>Search</p>
+        <label htmlFor="search-input">
+          <p>Search Advocates</p>
+        </label>
         <p>
-          Searching for: <span id="search-term"></span>
+          Searching for: <span aria-live="polite">{searchTerm}</span>
         </p>
-        <input style={{ border: "1px solid black" }} onChange={onChange} />
-        <button onClick={onClick}>Reset Search</button>
+        <input
+          id="search-input"
+          type="text"
+          value={searchTerm}
+          style={{ border: "1px solid black" }}
+          onChange={onChange}
+          aria-describedby="search-description"
+          placeholder="Search by name, city, degree, specialty, or experience"
+        />
+        <p id="search-description" className="sr-only">
+          Search through advocate profiles by typing any part of their name, location, degree, specialty, or years of experience
+        </p>
+        <button onClick={onClick} aria-label="Clear search and show all advocates">Reset Search</button>
       </div>
       <br />
       <br />
-      <table>
+      <table role="table" aria-label="List of healthcare advocates">
+        <caption>
+          Healthcare Advocates Directory - {filteredAdvocates.length} advocate{filteredAdvocates.length !== 1 ? 's' : ''} found
+        </caption>
         <thead>
-          <th>First Name</th>
-          <th>Last Name</th>
-          <th>City</th>
-          <th>Degree</th>
-          <th>Specialties</th>
-          <th>Years of Experience</th>
-          <th>Phone Number</th>
+          <tr>
+            <th scope="col">First Name</th>
+            <th scope="col">Last Name</th>
+            <th scope="col">City</th>
+            <th scope="col">Degree</th>
+            <th scope="col">Specialties</th>
+            <th scope="col">Years of Experience</th>
+            <th scope="col">Phone Number</th>
+          </tr>
         </thead>
         <tbody>
-          {filteredAdvocates.map((advocate) => {
+          {filteredAdvocates.map((advocate, index) => {
             return (
-              <tr>
+              <tr key={`advocate-${index}`}>
                 <td>{advocate.firstName}</td>
                 <td>{advocate.lastName}</td>
                 <td>{advocate.city}</td>
                 <td>{advocate.degree}</td>
                 <td>
-                  {advocate.specialties.map((s) => (
-                    <div>{s}</div>
+                  {advocate.specialties.map((specialty: string, specialtyIndex: number) => (
+                    <div key={`specialty-${index}-${specialtyIndex}`}>{specialty}</div>
                   ))}
                 </td>
                 <td>{advocate.yearsOfExperience}</td>

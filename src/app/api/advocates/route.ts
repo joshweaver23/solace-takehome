@@ -1,8 +1,9 @@
 import db from "../../../db";
 import { advocates } from "../../../db/schema";
 import { advocateData } from "../../../db/seed/advocates";
+import { AdvocateApiResponse } from "../../../types/advocate";
 
-export async function GET() {
+export async function GET(): Promise<Response> {
   try {
     // Try to get data from database first
     const data = await db.select().from(advocates);
